@@ -99,9 +99,34 @@ public class Menu {
      */
     private void executarAlinea2() {
         System.out.println("\n┌────────────────────────────────────────┐");
-        System.out.println("│              ALÍNEA 2                  │");
+        System.out.println("│    ALÍNEA 2 - DESENCRIPTAR COM SALTS   │");
         System.out.println("└────────────────────────────────────────┘");
-        System.out.println("\nEsta funcionalidade ainda não foi implementada.");
+
+        System.out.println("\nEstrutura: [Salt1: 3 letras] + [Mensagem] + [Salt2: 3 letras]");
+        System.out.println("Cada parte foi cifrada com um deslocamento diferente.\n");
+
+        System.out.print("Introduza a mensagem cifrada: ");
+        String mensagemCifrada = scanner.nextLine();
+
+        // Validações
+        if (mensagemCifrada == null || mensagemCifrada.trim().isEmpty()) {
+            System.out.println("\n[ERRO] A mensagem não pode estar vazia!");
+            System.out.println("\nPrima ENTER para voltar ao menu...");
+            scanner.nextLine();
+            return;
+        }
+
+        if (mensagemCifrada.length() < 7) {
+            System.out.println("\n[ERRO] A mensagem deve ter pelo menos 7 caracteres!");
+            System.out.println("        (3 para Salt1 + 1 para mensagem + 3 para Salt2)");
+            System.out.println("\nPrima ENTER para voltar ao menu...");
+            scanner.nextLine();
+            return;
+        }
+
+        // Desencriptar todas as combinações
+        CaesarCipher.decryptAllCombinations(mensagemCifrada);
+
         System.out.println("\nPrima ENTER para voltar ao menu...");
         scanner.nextLine();
     }
