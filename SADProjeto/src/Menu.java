@@ -87,7 +87,7 @@ public class Menu {
         }
 
         // Desencriptar e mostrar todas as possibilidades
-        CaesarCipher.displayAllDecryptions(mensagemCifrada);
+        CaesarCipher.apresentarTodasDesencriptacoes(mensagemCifrada);
 
         System.out.println("Prima ENTER para voltar ao menu...");
         scanner.nextLine();
@@ -108,14 +108,6 @@ public class Menu {
         System.out.print("Introduza a mensagem cifrada: ");
         String mensagemCifrada = scanner.nextLine();
 
-        // Validações
-        if (mensagemCifrada == null || mensagemCifrada.trim().isEmpty()) {
-            System.out.println("\n[ERRO] A mensagem não pode estar vazia!");
-            System.out.println("\nPrima ENTER para voltar ao menu...");
-            scanner.nextLine();
-            return;
-        }
-
         if (mensagemCifrada.length() < 7) {
             System.out.println("\n[ERRO] A mensagem deve ter pelo menos 7 caracteres!");
             System.out.println("        (3 para Salt1 + 1 para mensagem + 3 para Salt2)");
@@ -125,7 +117,7 @@ public class Menu {
         }
 
         // Desencriptar todas as combinações
-        CaesarCipher.decryptAllCombinations(mensagemCifrada);
+        CaesarCipher.desencriptarTodasCombinacoes(mensagemCifrada);
 
         System.out.println("\nPrima ENTER para voltar ao menu...");
         scanner.nextLine();
