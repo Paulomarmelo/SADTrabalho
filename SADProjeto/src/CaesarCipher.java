@@ -9,7 +9,17 @@ public class CaesarCipher {
 
     private static final Pattern WORD_PATTERN = Pattern.compile("\\b(?=.*[AEIOUÁÉÍÓÚaeiouáéíóú])[\\p{L}]{2,}\\b");
     private static final Pattern VOWEL_PATTERN = Pattern.compile("[AEIOUaeiouÁÉÍÓÚáéíóú]");
-    private static final Pattern IMPOSSIBLE_PATTERN = Pattern.compile("(?i)([qw])\\1+|([\\p{L}])\\2{2,}");
+    private static final Pattern IMPOSSIBLE_PATTERN = Pattern.compile(
+            "(?iu)(?:k{2}|w{2}|y{2}|q{2}|j{2}|([\\p{L}])\\1{2,}|[bcdfghjklmnpqrstvwxyz]{4,})");
+    private static boolean filtrosAtivos = true;
+
+    public static boolean filtrosAtivos() {
+        return filtrosAtivos;
+    }
+
+    public static void definirFiltrosAtivos(boolean ativos) {
+        filtrosAtivos = ativos;
+    }
 
     /**
      * Desencripta uma mensagem usando um deslocamento específico
@@ -68,7 +78,11 @@ public class CaesarCipher {
         System.out.println("TODAS AS POSSIBILIDADES DE DESENCRIPTAÇÃO");
         System.out.println("========================================");
         System.out.println("Mensagem cifrada: " + text);
-        System.out.println("(apresentando apenas resultados que cumprem os filtros)");
+        if (filtrosAtivos) {
+            System.out.println("(apresentando apenas resultados que cumprem os filtros)");
+        } else {
+            System.out.println("(filtros desativados - todas as hipóteses são listadas)");
+        }
         System.out.println("----------------------------------------\n");
 
         String[] results = desencriptarTodosDeslocamentos(text);
@@ -76,7 +90,7 @@ public class CaesarCipher {
 
         for (int i = 0; i < results.length; i++) {
             String resultado = results[i];
-            if (!textoValido(resultado)) {
+            if (filtrosAtivos && !textoValido(resultado)) {
                 continue;
             }
 
@@ -84,11 +98,15 @@ public class CaesarCipher {
             exibidos++;
         }
 
-        if (exibidos == 0) {
+        if (filtrosAtivos && exibidos == 0) {
             System.out.println("Nenhum resultado cumpriu os filtros definidos.");
         }
 
-        System.out.println("\nTotal mostrado: " + exibidos + " de 26 (após filtros)");
+        if (filtrosAtivos) {
+            System.out.println("\nTotal mostrado: " + exibidos + " de 26 (após filtros)");
+        } else {
+            System.out.println("\nTotal mostrado: " + exibidos + " de 26");
+        }
         System.out.println("\n========================================\n");
     }
 
@@ -124,7 +142,11 @@ public class CaesarCipher {
         System.out.println("=".repeat(100));
         System.out.println("Mensagem cifrada: " + cipherText);
         System.out.println("Total de combinações: 17,576 (26 x 26 x 26)");
-        System.out.println("(apresentando apenas combinações cujo texto da mensagem cumpre os filtros)");
+        if (filtrosAtivos) {
+            System.out.println("(apresentando apenas combinações cujo texto da mensagem cumpre os filtros)");
+        } else {
+            System.out.println("(filtros desativados - todas as combinações serão mostradas)");
+        }
         System.out.println("-".repeat(100));
         System.out.printf("%-6s | %-18s | %-30s | %-18s\n",
                 "  Nº  ", "Salt1 [shift]", "Mensagem [shift]", "Salt2 [shift]");
@@ -142,7 +164,7 @@ public class CaesarCipher {
                     // Desencriptar com esta combinação
                     String[] resultado = desencriptarComSalts(cipherText, shiftSalt1, shiftMsg, shiftSalt2);
 
-                    if (!textoValido(resultado[1])) {
+                    if (filtrosAtivos && !textoValido(resultado[1])) {
                         continue;
                     }
 
@@ -159,8 +181,12 @@ public class CaesarCipher {
         }
 
         System.out.println("=".repeat(100));
-        System.out.println("Total analisado: " + totalTestado + " combinações");
-        System.out.println("Total mostrado: " + contador + " combinações (após filtros)");
+        if (filtrosAtivos) {
+            System.out.println("Total analisado: " + totalTestado + " combinações");
+            System.out.println("Total mostrado: " + contador + " combinações (após filtros)");
+        } else {
+            System.out.println("Filtros desativados: " + contador + " combinações foram apresentadas.");
+        }
         System.out.println("=".repeat(100));
     }
 
