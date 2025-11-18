@@ -27,6 +27,9 @@ public class Menu {
                 case 2:
                     executarAlinea2();
                     break;
+                case 3:
+                    alternarFiltros();
+                    break;
                 case 0:
                     System.out.println("\nA sair do programa...");
                     System.out.println("Até breve!");
@@ -49,6 +52,8 @@ public class Menu {
         System.out.println("╚════════════════════════════════════════╝");
         System.out.println("  1 - Alínea 1");
         System.out.println("  2 - Alínea 2");
+        boolean filtrosAtivos = CaesarCipher.filtrosAtivos();
+        System.out.println("  3 - " + (filtrosAtivos ? "Desativar filtros de resultados" : "Ativar filtros de resultados"));
         System.out.println("  0 - Sair");
         System.out.println("─────────────────────────────────────────");
         System.out.print("Escolha uma opção: ");
@@ -120,6 +125,21 @@ public class Menu {
         CaesarCipher.desencriptarTodasCombinacoes(mensagemCifrada);
 
         System.out.println("\nPrima ENTER para voltar ao menu...");
+        scanner.nextLine();
+    }
+
+    private void alternarFiltros() {
+        boolean estadoAtual = CaesarCipher.filtrosAtivos();
+        CaesarCipher.definirFiltrosAtivos(!estadoAtual);
+
+        System.out.println("\n┌────────────────────────────────────────┐");
+        if (estadoAtual) {
+            System.out.println("│    Filtros de resultados DESATIVADOS    │");
+        } else {
+            System.out.println("│     Filtros de resultados ATIVADOS      │");
+        }
+        System.out.println("└────────────────────────────────────────┘");
+        System.out.println("Prima ENTER para continuar...");
         scanner.nextLine();
     }
 }
