@@ -1,3 +1,8 @@
+import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
+import java.util.Base64;
+import java.util.LinkedHashSet;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -11,7 +16,39 @@ public class CaesarCipher {
     private static final Pattern VOWEL_PATTERN = Pattern.compile("[AEIOUaeiouÁÉÍÓÚáéíóú]");
     private static final Pattern IMPOSSIBLE_PATTERN = Pattern.compile(
             "(?iu)(?:k{2}|w{2}|y{2}|q{2}|j{2}|([\\p{L}])\\1{2,}|[bcdfghjklmnpqrstvwxyz]{4,})");
+    private static final String SALT_CHARS = "!#$%&+-<=>@";
+    private static final Pattern SALT_PATTERN = Pattern.compile("[" + Pattern.quote(SALT_CHARS) + "]{1,4}");
     private static boolean filtrosAtivos = true;
+
+    public static class ResultadoDesencriptacao {
+        private final String mensagem;
+        private final String pepper;
+        private final String salt;
+        private final boolean saltNoInicio;
+
+        public ResultadoDesencriptacao(String mensagem, String pepper, String salt, boolean saltNoInicio) {
+            this.mensagem = mensagem;
+            this.pepper = pepper;
+            this.salt = salt;
+            this.saltNoInicio = saltNoInicio;
+        }
+
+        public String getMensagem() {
+            return mensagem;
+        }
+
+        public String getPepper() {
+            return pepper;
+        }
+
+        public String getSalt() {
+            return salt;
+        }
+
+        public boolean isSaltNoInicio() {
+            return saltNoInicio;
+        }
+    }
 
     public static boolean filtrosAtivos() {
         return filtrosAtivos;
@@ -108,6 +145,204 @@ public class CaesarCipher {
             System.out.println("\nTotal mostrado: " + exibidos + " de 26");
         }
         System.out.println("\n========================================\n");
+    }
+
+    public static List<ResultadoDesencriptacao> desencriptarHashComParametros(String hashBase64,
+                                                                             String alfabetoSubstituicao,
+                                                                             int deslocacao,
+                                                                             String pepper,
+                                                                             String salt,
+                                                                             Boolean saltNoInicio) {
+        if (hashBase64 == null || hashBase64.isEmpty()) {
+            throw new IllegalArgumentException("Hash Base64 inválida");
+        }
+
+        if (alfabetoSubstituicao == null || alfabetoSubstituicao.length() != 26) {
+            throw new IllegalArgumentException("O alfabeto de substituição deve ter 26 letras");
+        }
+
+        String textoCodificado;
+        try {
+            byte[] dados = Base64.getDecoder().decode(hashBase64);
+            textoCodificado = new String(dados, StandardCharsets.ISO_8859_1);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException("Hash Base64 inválida", e);
+        }
+
+        String aposCaesar = desencriptarComDeslocamento(textoCodificado, deslocacao);
+        String aposSubstituicao = desfazerSubstituicao(aposCaesar, alfabetoSubstituicao);
+        List<String> peppers = determinarPepper(aposSubstituicao, pepper);
+        List<ResultadoDesencriptacao> resultados = new ArrayList<>();
+
+        for (String pepperAtual : peppers) {
+            String restante = aposSubstituicao.substring(pepperAtual.length());
+            for (SaltOption opcao : determinarSalt(restante, salt, saltNoInicio)) {
+                resultados.add(new ResultadoDesencriptacao(opcao.mensagem(), pepperAtual, opcao.salt(), opcao.saltNoInicio()));
+            }
+        }
+
+        if (resultados.isEmpty()) {
+            throw new IllegalArgumentException("Não foi possível determinar Pepper/Salt válidos para o texto desencriptado");
+        }
+
+        return resultados;
+    }
+
+    private static String desfazerSubstituicao(String texto, String alfabetoSubstituicao) {
+        int[] inverso = construirMapaInverso(alfabetoSubstituicao);
+        StringBuilder sb = new StringBuilder(texto.length());
+
+        for (char c : texto.toCharArray()) {
+            if (c >= 'A' && c <= 'Z') {
+                int indice = inverso[c - 'A'];
+                if (indice < 0) {
+                    throw new IllegalArgumentException("Caractere '" + c + "' não pertence ao alfabeto de substituição");
+                }
+                sb.append((char) ('A' + indice));
+            } else {
+                sb.append(c);
+            }
+        }
+
+        return sb.toString();
+    }
+
+    private static int[] construirMapaInverso(String alfabetoSubstituicao) {
+        int[] inverso = new int[26];
+        for (int i = 0; i < inverso.length; i++) {
+            inverso[i] = -1;
+        }
+
+        for (int i = 0; i < alfabetoSubstituicao.length(); i++) {
+            char c = Character.toUpperCase(alfabetoSubstituicao.charAt(i));
+            if (c < 'A' || c > 'Z') {
+                throw new IllegalArgumentException("O alfabeto de substituição só pode conter letras maiúsculas");
+            }
+            int idx = c - 'A';
+            if (inverso[idx] != -1) {
+                throw new IllegalArgumentException("Caractere duplicado no alfabeto de substituição: " + c);
+            }
+            inverso[idx] = i;
+        }
+
+        return inverso;
+    }
+
+    private record SaltOption(String mensagem, String salt, boolean saltNoInicio) {}
+
+    private static List<String> determinarPepper(String texto, String pepperInformado) {
+        List<String> peppers = new ArrayList<>();
+
+        if (pepperInformado != null && !pepperInformado.isEmpty()) {
+            if (!pepperInformado.matches("\\d{1,2}")) {
+                throw new IllegalArgumentException("Pepper inválido. Use 1 ou 2 dígitos.");
+            }
+            if (!texto.startsWith(pepperInformado)) {
+                throw new IllegalArgumentException("Pepper fornecido não corresponde ao texto desencriptado");
+            }
+            peppers.add(pepperInformado);
+            return peppers;
+        }
+
+        int max = Math.min(2, texto.length());
+        int len = 0;
+        while (len < max && Character.isDigit(texto.charAt(len))) {
+            len++;
+        }
+
+        if (len == 0) {
+            peppers.add("");
+        } else {
+            for (int i = 1; i <= len; i++) {
+                peppers.add(texto.substring(0, i));
+            }
+        }
+
+        return peppers;
+    }
+
+    private static List<SaltOption> determinarSalt(String texto,
+                                                   String saltInformado,
+                                                   Boolean saltNoInicioInformado) {
+        List<SaltOption> salts = new ArrayList<>();
+
+        if (saltInformado != null && !saltInformado.isEmpty()) {
+            if (!SALT_PATTERN.matcher(saltInformado).matches()) {
+                throw new IllegalArgumentException("Salt inválido. Use apenas caracteres permitidos e máximo 4.");
+            }
+
+            if (Boolean.TRUE.equals(saltNoInicioInformado)) {
+                if (!texto.startsWith(saltInformado)) {
+                    throw new IllegalArgumentException("Salt fornecido não corresponde ao início do texto");
+                }
+                salts.add(new SaltOption(texto.substring(saltInformado.length()), saltInformado, true));
+            } else if (Boolean.FALSE.equals(saltNoInicioInformado)) {
+                if (!texto.endsWith(saltInformado)) {
+                    throw new IllegalArgumentException("Salt fornecido não corresponde ao fim do texto");
+                }
+                salts.add(new SaltOption(texto.substring(0, texto.length() - saltInformado.length()), saltInformado, false));
+            } else {
+                boolean encontrado = false;
+                if (texto.startsWith(saltInformado)) {
+                    salts.add(new SaltOption(texto.substring(saltInformado.length()), saltInformado, true));
+                    encontrado = true;
+                }
+                if (texto.endsWith(saltInformado)) {
+                    salts.add(new SaltOption(texto.substring(0, texto.length() - saltInformado.length()), saltInformado, false));
+                    encontrado = true;
+                }
+                if (!encontrado) {
+                    throw new IllegalArgumentException("Salt fornecido não corresponde ao início nem ao fim do texto");
+                }
+            }
+
+            return salts;
+        }
+
+        LinkedHashSet<SaltOption> conjunto = new LinkedHashSet<>();
+
+        String prefixo = extrairSaltInicio(texto);
+        if (!prefixo.isEmpty()) {
+            conjunto.add(new SaltOption(texto.substring(prefixo.length()), prefixo, true));
+        }
+
+        String sufixo = extrairSaltFim(texto);
+        if (!sufixo.isEmpty()) {
+            conjunto.add(new SaltOption(texto.substring(0, texto.length() - sufixo.length()), sufixo, false));
+        }
+
+        if (conjunto.isEmpty()) {
+            conjunto.add(new SaltOption(texto, "", false));
+        }
+
+        salts.addAll(conjunto);
+        return salts;
+    }
+
+    private static String extrairSaltInicio(String texto) {
+        int limite = Math.min(4, texto.length());
+        StringBuilder candidato = new StringBuilder();
+        for (int j = 0; j < limite; j++) {
+            char c = texto.charAt(j);
+            if (SALT_CHARS.indexOf(c) < 0) {
+                break;
+            }
+            candidato.append(c);
+        }
+        return candidato.toString();
+    }
+
+    private static String extrairSaltFim(String texto) {
+        int limite = Math.min(4, texto.length());
+        StringBuilder candidato = new StringBuilder();
+        for (int j = 1; j <= limite; j++) {
+            char c = texto.charAt(texto.length() - j);
+            if (SALT_CHARS.indexOf(c) < 0) {
+                break;
+            }
+            candidato.insert(0, c);
+        }
+        return candidato.toString();
     }
 
     public static String[] desencriptarComSalts(String cipherText,
