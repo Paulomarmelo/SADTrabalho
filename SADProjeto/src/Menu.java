@@ -26,9 +26,12 @@ public class Menu {
                     executarAlinea1();
                     break;
                 case 2:
-                    desencriptarHashComParametros();
+                    executarAlinea2();
                     break;
                 case 3:
+                    desencriptarHashComParametros();
+                    break;
+                case 4:
                     alternarFiltros();
                     break;
                 case 0:
@@ -51,10 +54,11 @@ public class Menu {
         System.out.println("\n╔════════════════════════════════════════╗");
         System.out.println("║   DESENCRIPTAÇÃO - CIFRA DE CÉSAR     ║");
         System.out.println("╚════════════════════════════════════════╝");
-        System.out.println("  1 - Alínea 1");
-        System.out.println("  2 - Desencriptar hash com parâmetros");
+        System.out.println("  1 - Alínea 1 (Caesar simples)");
+        System.out.println("  2 - Alínea 2 (Caesar com Salts)");
+        System.out.println("  3 - Desencriptar hash com parâmetros");
         boolean filtrosAtivos = CaesarCipher.filtrosAtivos();
-        System.out.println("  3 - " + (filtrosAtivos ? "Desativar filtros de resultados" : "Ativar filtros de resultados"));
+        System.out.println("  4 - " + (filtrosAtivos ? "Desativar filtros de resultados" : "Ativar filtros de resultados"));
         System.out.println("  0 - Sair");
         System.out.println("─────────────────────────────────────────");
         System.out.print("Escolha uma opção: ");
@@ -101,7 +105,36 @@ public class Menu {
 
     /**
      * Executa a funcionalidade da Alínea 2
-     * (Ainda não implementada)
+     * Desencripta mensagens com dois Salts (um no início e outro no fim)
+     */
+    private void executarAlinea2() {
+        System.out.println("\n┌────────────────────────────────────────┐");
+        System.out.println("│    ALÍNEA 2 - CAESAR COM SALTS        │");
+        System.out.println("└────────────────────────────────────────┘");
+
+        System.out.print("Introduza a mensagem cifrada: ");
+        String mensagemCifrada = scanner.nextLine();
+
+        if (mensagemCifrada == null || mensagemCifrada.trim().isEmpty()) {
+            System.out.println("\nErro: A mensagem não pode estar vazia!");
+            return;
+        }
+
+        if (mensagemCifrada.length() < 7) {
+            System.out.println("\nErro: A mensagem deve ter pelo menos 7 caracteres!");
+            System.out.println("      (3 para Salt1 + 1 para mensagem + 3 para Salt2)");
+            return;
+        }
+
+        // Desencriptar e mostrar todas as combinações
+        CaesarCipher.desencriptarTodasCombinacoes(mensagemCifrada);
+
+        System.out.println("Prima ENTER para voltar ao menu...");
+        scanner.nextLine();
+    }
+
+    /**
+     * Desencripta hash com parâmetros fornecidos pelo utilizador
      */
     private void desencriptarHashComParametros() {
         System.out.println("\n┌────────────────────────────────────────┐");
